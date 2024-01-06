@@ -7,7 +7,6 @@ function App() {
   const videoRef = useRef();
   const canvasRef = useRef();
   const fileInputRef = useRef();
-  let interval = useRef();
   const [isPlaying, setIsPlaying] = useState(false);
   const [checkFile, setCheckFile] = useState("");
   const [showClearButton, setShowClearButton] = useState(false);
@@ -15,29 +14,33 @@ function App() {
   const handlePlayPause = () => {
     if (isPlaying) {
       videoRef.current.pause();
-      canvasRef.current.innerHtml = "";
-      clearInterval(interval.current);
-      setIsPlaying(!isPlaying);
+      setIsPlaying(false);
     } else {
       loadModels();
-      setIsPlaying(!isPlaying);
+      videoRef.current.play();
+      setIsPlaying(true);
     }
   };
 
-  const loadModels = () => {
-    Promise.all([
+  const loadModels = async () => {
+    await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
       faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
       faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
       faceapi.nets.faceExpressionNet.loadFromUri("/models"),
-    ]).then(() => {
-      detectFaces();
-    });
+    ]);
+
+    detectFaces();
   };
 
   const detectFaces = () => {
-    interval.current = videoRef.current.play().then(() => {
-      setInterval(async () => {
+    faceapi.matchDimensions(canvasRef.current, {
+      width: videoRef.current.width,
+      height: videoRef.current.height,
+    });
+
+    videoRef.current.addEventListener("play", () => {
+      const draw = async () => {
         const detections = await faceapi
           .detectAllFaces(
             videoRef.current,
@@ -45,22 +48,17 @@ function App() {
           )
           .withFaceLandmarks()
           .withFaceExpressions();
-        canvasRef.current.innerHtml = faceapi.createCanvasFromMedia(
-          videoRef.current
-        );
 
-        faceapi.matchDimensions(canvasRef.current, {
-          width: videoRef.current.width,
-          height: videoRef.current.height,
-        });
         const resized = faceapi.resizeResults(detections, {
           width: canvasRef.current.width,
           height: canvasRef.current.height,
         });
+
+        canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        
         faceapi.draw.drawDetections(canvasRef.current, resized);
         faceapi.draw.drawFaceLandmarks(canvasRef.current, resized);
         faceapi.draw.drawFaceExpressions(canvasRef.current, resized);
-        const resizeDetection = [];
 
         resized.forEach((detection) => {
           const { _box } = detection.detection;
@@ -74,7 +72,11 @@ function App() {
             strokeWidth: 2,
           });
         });
-      }, 1000);
+
+        requestAnimationFrame(draw);
+      };
+
+      draw();
     });
   };
 
@@ -93,7 +95,7 @@ function App() {
     videoRef.current.pause();
     videoRef.current.src = "";
     setCheckFile("");
-    canvasRef.current.innerHtml = "";
+    canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     setShowClearButton(false);
   };
 
