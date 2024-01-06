@@ -10,6 +10,8 @@ function App() {
   let interval = useRef();
   const [isPlaying, setIsPlaying] = useState(false);
   const [checkFile, setCheckFile] = useState("");
+  const [showClearButton, setShowClearButton] = useState(false);
+
   const handlePlayPause = () => {
     if (isPlaying) {
       videoRef.current.pause();
@@ -21,6 +23,7 @@ function App() {
       setIsPlaying(!isPlaying);
     }
   };
+
   const loadModels = () => {
     Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
@@ -58,15 +61,12 @@ function App() {
         faceapi.draw.drawFaceLandmarks(canvasRef.current, resized);
         faceapi.draw.drawFaceExpressions(canvasRef.current, resized);
         const resizeDetection = [];
-        // const fabricCanvas = new fabric.Canvas(canvasRef.current);
-
-        //
 
         resized.forEach((detection) => {
           const { _box } = detection.detection;
           const rect = new fabric.Rect({
-            left: _box._x, // Adjust as needed based on face detection coordinates
-            top: _box._y, // Adjust as needed based on face detection coordinates
+            left: _box._x,
+            top: _box._y,
             width: _box._width,
             height: _box._height,
             fill: "transparent",
@@ -77,28 +77,44 @@ function App() {
       }, 1000);
     });
   };
+
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) {
       const videoURL = URL.createObjectURL(file);
       videoRef.current.src = videoURL;
       setCheckFile(videoURL);
+      setShowClearButton(true);
       videoRef.current.load();
     }
   };
+
+  const handleClearVideo = () => {
+    videoRef.current.pause();
+    videoRef.current.src = "";
+    setCheckFile("");
+    canvasRef.current.innerHtml = "";
+    setShowClearButton(false);
+  };
+
   return (
     <>
       <div className="controls">
-        <input
-          type="file"
-          accept="video/*"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-        />
+        {!showClearButton && (
+          <input
+            type="file"
+            accept="video/*"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+          />
+        )}
         {checkFile !== "" && (
           <button onClick={handlePlayPause}>
             {isPlaying ? "Pause" : "Play"}
           </button>
+        )}
+        {showClearButton && (
+          <button onClick={handleClearVideo}>Clear Video</button>
         )}
       </div>
       <div className="video-canva">
