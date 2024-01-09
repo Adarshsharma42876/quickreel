@@ -1,4 +1,7 @@
 /* Updated Button Style */
+body {
+  background-color: coral;
+}
 button {
   margin-left: 20px;
   padding: 10px 20px;
@@ -10,6 +13,7 @@ button {
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
+
 
 button:hover {
   background-color: #45a049; /* Darker Green */
